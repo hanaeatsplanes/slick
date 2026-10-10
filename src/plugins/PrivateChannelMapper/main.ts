@@ -7,16 +7,16 @@ import type { MainCtx, SlickMainPlugin } from '$slick';
 import { CHANNEL_ID } from './flaron.ts';
 
 const FLARON = 'https://flaron.halceon.dev';
-const UNKNOWN_TTL_MS = 24 * 60 * 60 * 1000;
+const NONEXISTENT_TTL_MS = 24 * 60 * 60 * 1000;
 
-const unknown = new Map<string, number>();
+const nonexistent = new Map<string, number>();
 const CHANNEL_NAME = /^[a-z0-9][a-z0-9._-]{0,79}$/;
 
-function recentlyUnknown(key: string): boolean {
-  const at = unknown.get(key);
+function recentlyNonexistent(key: string): boolean {
+  const at = nonexistent.get(key);
   if (at === undefined) return false;
-  if (Date.now() - at > UNKNOWN_TTL_MS) {
-    unknown.delete(key);
+  if (Date.now() - at > NONEXISTENT_TTL_MS) {
+    nonexistent.delete(key);
     return false;
   }
   return true;
@@ -27,14 +27,14 @@ function record(value: unknown): Record<string, unknown> | undefined {
 }
 
 async function ask(ctx: MainCtx, path: string, key: string): Promise<Record<string, unknown> | undefined> {
-  if (recentlyUnknown(key)) return undefined;
+  if (recentlyNonexistent(key)) return undefined;
 
   const response = await ctx.net.fetch(`${FLARON}${path}`);
   if (response.status < 200 || response.status >= 300) throw new Error(`HTTP ${response.status}`);
 
   const data = record(JSON.parse(response.body));
-  if (data?.error === 'unknown') {
-    unknown.set(key, Date.now());
+  if (data?.error === 'nonexistent') {
+    nonexistent.set(key, Date.now());
     return undefined;
   }
   return data;
